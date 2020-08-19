@@ -1,0 +1,1 @@
+运行GRACE_JPEG.py实现16策略压缩，运行JPEG_new.py实现8原版JPEG压缩
