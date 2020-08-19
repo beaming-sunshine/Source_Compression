@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>GRACE</title>
+	<style type="text/css">
+		body{
+			background-image: url('../static/img/background.jpg');
+			background-repeat: repeat-y;
+			background-size: cover;
+		}
+		.content-a-upload {
+			padding:  0px 10px;
+			height: 56px;
+			width: 130px;
+			font: 800 18px/56px "宋体";
+			text-align: center;
+			cursor: pointer;
+			color: #000;
+			background:#9BCD9B;
+			border: 1px solid #9BCD9B;
+			border-radius: 6px;
+			overflow: hidden;
+			display: inline-block;
+			text-decoration: none;
+		}
+		.content-a-upload input{
+			font-size: 100px;
+			opacity: 0;
+			cursor: pointer;
+		}
+		#pic {
+			position: absolute;
+			height: 100px;
+			width: 100px;
+			left: 0;
+			top: 0;
+		}
+		.content-a-upload:hover {
+			color: #444;
+			background: #90EE90;
+			border-color: #90EE90;
+			text-decoration: none
+		}
+		.float{ 
+			width: 48%;        
+			overflow: hidden;      
+			border: 3px solid #9BCD9B;      
+			border-radius: 6px;      
+			position: relative;
+			float: left;
+			margin-top: 30px;
+			margin-right: 10px;
+		} 
+		.predict{ 
+			width: 96%;        
+			overflow: hidden;      
+			border: 3px solid #9BCD9B;      
+			border-radius: 6px;      
+			position: relative;
+			float: left;
+			margin-top: 30px;
+			margin-right: 10px;
+		} 
+		.card {
+			position: relative;
+			top: 25px;
+			min-height: 460px;
+			z-index: 1;
+			background: #FFFFFF;
+			margin: 0 auto 10px;
+			padding: 25px;
+			text-align: center;
+			box-shadow: 0 0 20px 0 rgba(0, 0, 0, 0.2), 0 5px 5px 0 rgba(0, 0, 0, 0.24);
+			float: left
+		}
+		.card1 {
+			min-width: 20%;
+			max-width: 20%;
+			left: 3%;
+		}
+		.card2 {
+			min-width: 64%;
+			margin-left: 5%
+		}
+		#model form {
+			text-align: left;
+			font-size: 18px;
+			padding: 20px 26%;
+
+		}
+	</style>
+
+</head>
+<body onload="onload();">
+	<div id="model" class="card card1">
+		<p class="center">选择模型</p>
+		<form>
+			<label><input name="model" type="radio" value="resnet" />resnet</label><br>
+			<label><input name="model" type="radio" value="alexnet" />alexnet</label><br>
+			<label><input name="model" type="radio" value="vgg" />vgg</label><br>
+			<label><input name="model" type="radio" value="squeezenet" />squeezenet</label> 
+		</form>
+		<a href="javascript:void(0);" class="content-a-upload" id="generate">生成策略<input type="submit" name="generate"></a>
+		<div id="showW"></div>
+	</div>
+	<div id="main" class="card card2">
+		<form>
+			<a href="javascript:void(0);" class="content-a-upload" id="select">选择图片<input type="file" name="pic" id="pic"></a>
+			<a href="javascript:void(0);" class="content-a-upload" id="compress">压缩图片<input type="submit" name="compress" ></a>
+			<a href="javascript:void(0);" class="content-a-upload" id="predict">识别结果<input type="submit" name="predict"></a>
+		</form>
+		<div id="show"></div>
+	</div>
+	
+
+
+	<script type="text/javascript" src="../static/js/jquery.min.js"></script>
+	<script type="text/javascript">
+		function onload(){
+			var input = document.getElementById("pic");
+			var select = document.getElementById("select")
+			var generate = document.getElementById("generate");
+			var compress = document.getElementById("compress");
+			var predict = document.getElementById("predict");
+			var dataArr=[];
+			if(typeof FileReader==='undefined'){
+				alert("抱歉，你的浏览器不支持 FileReader");
+				input.setAttribute('disabled','disabled');
+			}else{
+				input.addEventListener('change',readFile,false);
+			}
+			function readFile(){
+				var fd = new FormData();
+				var iLen = this.files.length;
+				var index = 0;
+				for(var i=0;i<iLen;i++){
+					if (!input['value'].match(/.jpg|.gif|.png|.jpeg|.bmp/i)){
+						return alert("上传的图片格式不正确，请重新选择");
+					}
+					var reader = new FileReader();
+					reader.index = i;
+					fd.append(i,this.files[i]);
+					reader.readAsDataURL(this.files[i]);
+					reader.fileName = this.files[i].name;
+					reader.onload = function(e){
+						var imgMsg = {
+							index:reader.index,
+							name : this.fileName,
+							base64 : this.result
+						}
+						dataArr.push(imgMsg);
+						result = '<div class="result"><img src="'+this.result+'" alt="" width=280/></div>';
+						var div = document.createElement('div');
+						div.innerHTML = result;
+						div['className'] = 'float';
+						div['index'] = index;
+
+						document.getElementById('show').appendChild(div);
+						var img = div.getElementsByTagName('img')[0];
+						img.onload = function(){
+							this.parentNode.style.display = 'block';
+							var oParent = this.parentNode;
+						}
+						div.onclick = function(){
+							this.remove();
+							delete dataArr[this.index];
+						}
+						index++;
+					}
+				}
+			}
+			select.onclick=function(){
+        		input.value = "";
+        		$('.float').remove();
+        		$('.predict').remove();
+        		dataArr = [];
+        		index = 0;
+        		input.click();
+      		}
+			generate.onclick=function() {
+				var model = document.getElementsByName("model")
+				var nnmodel=null
+				for (var i = model.length - 1; i >= 0; i--) {
+					if(model[i].checked)
+						nnmodel=model[i].value
+				}
+				$.ajax({
+					url: 'generateP',
+					type: 'post',
+					dataType: 'text',
+					async:true,
+					data: {
+						nnmodel:nnmodel
+					},
+					success:function(data){
+						W = data.split(' ')
+						WR = String(W[0]).replace(/^(.*\..{4}).*$/,"$1");
+    					WG = String(W[1]).replace(/^(.*\..{4}).*$/,"$1");
+    					WB = String(W[2]).replace(/^(.*\..{4}).*$/,"$1");
+						result='<P>WR='+WR+'</P><P>WG='+WG+'</P><P>WB='+WB+'</P><P>TY='+W[3]+'</P>'
+						var div = document.getElementById("showW")
+						div.innerHTML = result;
+					}
+				})
+			}
+			compress.onclick=function() {
+				$.ajax({
+					url: '/compressimg',
+					type: 'post',
+					dataType: 'text',
+					async:true,
+					data: {
+						imgMsg:JSON.stringify(dataArr)
+					},
+					success:function(data){
+						console.log(data)
+						result= '<div class="result"><img src="'+data+'" alt="" width=280/></div>';
+						var div = document.createElement('div');
+						div.innerHTML = result;
+						div['className'] = 'float';
+						document.getElementById('show').appendChild(div);
+					}
+				})	
+			}
+			predict.onclick=function() {
+				$.ajax({
+					url: '/predictimg',
+					type: 'get',
+					dataType: 'text',
+					async:true,
+					success:function(data){
+						a = data.split(' ')
+						result='<P>top1: '+a[0]+'</P><P>top5: '+a[1]+' '+a[2]+' '+a[3]+' '+a[4]+' '+a[5]+'</P>'
+						var div = document.createElement('div');
+						div.innerHTML = result;
+						div['className'] = 'predict';
+						document.getElementById('show').appendChild(div);
+					}
+				})
+			}
+		}
+	</script>
+</body>
+
+</html>
